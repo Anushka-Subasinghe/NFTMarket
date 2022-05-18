@@ -4,6 +4,7 @@ import { create as ipfsHttpClient } from 'ipfs-http-client'
 import { useRouter } from 'next/router'
 import Web3Modal from 'web3modal'
 import axios from 'axios'
+const { TypedDataUtils } = require('ethers-eip712')
 
 const client = ipfsHttpClient('https://ipfs.infura.io:5001/api/v0')
 
@@ -12,6 +13,7 @@ import {
 } from '../config'
 
 import Market from '../artifacts/contracts/NFTMakret.sol/NFTMarket.json'
+import Web3 from 'web3'
 
 export default function CreateItem () {
     const [fileUrl, setFileUrl] = useState(null)
@@ -49,13 +51,36 @@ export default function CreateItem () {
         }
     }
 
+    async function _formatVoucher(voucher) {
+        const types = {
+            EIP712Domain: [
+              {name: "name", type: "string"},
+              {name: "version", type: "string"},
+              {name: "chainId", type: "uint256"},
+              {name: "verifyingContract", type: "address"},
+            ],
+            NFTVoucher: [
+              {name: "tokenId", type: "uint256"},
+              {name: "minPrice", type: "uint256"},
+              {name: "uri", type: "string"},  
+            ]
+        }
+        const domain = await _signingDomain()
+        return {
+          domain,
+          types: types,
+          primaryType: 'NFTVoucher',
+          message: voucher,
+        }
+    }
+
     async function _signingDomain() {
         const chainId = 1337
         const domain = {
             name: "Web3Club",
             version: "1",
-            verifyingContract: nftaddress,
-            chainId
+            chainId: chainId,
+            verifyingContract: nftmarketaddress,
         }
         return domain
     }
@@ -74,26 +99,28 @@ export default function CreateItem () {
         const signer = provider.getSigner()
 
         const voucher = { tokenId, minPrice, uri }
-        const domain = await _signingDomain()
-        const types = {
-            NFTVoucher: [
-                {name: "tokenId", type: "uint256"},
-                {name: "minPrice", type: "uint256"},
-                {name: "uri", type: "string"},  
-            ]
-        }
-        const signature = await signer._signTypedData(domain, types, voucher)
-
+        const typedData = await _formatVoucher(voucher)
+        const digest = TypedDataUtils.encodeDigest(typedData)
+        const signature = await signer.signMessage(digest)
+        console.log(signature)
+        // const domain = await _signingDomain()
+        // const types = {
+        //     NFTVoucher: [
+        //         {name: "tokenId", type: "uint256"},
+        //         {name: "minPrice", type: "uint256"},
+        //         {name: "uri", type: "string"},  
+        //     ]
+        // }
+       // const signature = await signer._signTypedData(domain, types, voucher)
+        
         if (localStorage.getItem("vouchers") == null) {
             localStorage.setItem("vouchers", "[]")
         }
 
         let old_data = JSON.parse(localStorage.getItem("vouchers"))
         old_data.push({
-            tokenId: tokenId,
-            minPrice: minPrice,
-            uri: uri,
-            signature: signature
+            ...voucher,
+            signature
         })
         localStorage.setItem("vouchers", JSON.stringify(old_data))
     } 

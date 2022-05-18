@@ -1,5 +1,6 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.4;
+//SPDX-License-Identifier: Unlicense
+pragma solidity ^0.8.0;
+pragma experimental ABIEncoderV2;
 
 import "hardhat/console.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
@@ -12,6 +13,7 @@ import "@openzeppelin/contracts/token/common/ERC2981.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract NFTMarket is ERC721URIStorage, ERC2981, EIP712, AccessControl, Ownable {
+    using ECDSA for bytes32;
     using Counters for Counters.Counter;
     Counters.Counter private _soldNFTs;
 
@@ -29,15 +31,15 @@ contract NFTMarket is ERC721URIStorage, ERC2981, EIP712, AccessControl, Ownable 
     }
 
     struct NFTVoucher {
-        uint tokenId;
-        uint minPrice;
+        uint256 tokenId;
+        uint256 minPrice;
         string uri;
         bytes signature;
     }
 
     struct NFT {
-        uint itemId;
-        uint tokenId;
+        uint256 itemId;
+        uint256 tokenId;
         address payable seller;
         address payable owner;
         uint256 price;
@@ -90,7 +92,7 @@ contract NFTMarket is ERC721URIStorage, ERC2981, EIP712, AccessControl, Ownable 
 
     function _verify(NFTVoucher calldata voucher) internal view returns (address) {
         bytes32 digest = _hash(voucher);
-        return ECDSA.recover(digest, voucher.signature);
+        return digest.toEthSignedMessageHash().recover(voucher.signature);
     }
 
     function _hash(NFTVoucher calldata voucher) internal view returns (bytes32) {
@@ -138,28 +140,6 @@ contract NFTMarket is ERC721URIStorage, ERC2981, EIP712, AccessControl, Ownable 
         return items;
     }
 
-    function fetchItemsCreated() public view returns (NFT[] memory) {
-        uint totalItemCount = _soldNFTs.current();
-        uint itemCount = 0;
-        uint currentIndex = 0;
-
-        for(uint i = 0; i < totalItemCount; i++) {
-            if(idToNFT[i + 1].seller == msg.sender) {
-                itemCount += 1;
-            }
-        }
-
-        NFT[] memory items = new NFT[](itemCount);
-
-        for(uint i = 0; i < totalItemCount; i++) {
-            if(idToNFT[i + 1].seller == msg.sender) {
-                uint currentId = idToNFT[i + 1].itemId;
-                NFT storage currentItem = idToNFT[currentId];
-                items[currentIndex] = currentItem;
-                currentIndex += 1;
-            }
-        }
-        return items;
-    }
+    
 
 }
