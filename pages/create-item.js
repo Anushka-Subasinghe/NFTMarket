@@ -102,16 +102,6 @@ export default function CreateItem () {
         const typedData = await _formatVoucher(voucher)
         const digest = TypedDataUtils.encodeDigest(typedData)
         const signature = await signer.signMessage(digest)
-        console.log(signature)
-        // const domain = await _signingDomain()
-        // const types = {
-        //     NFTVoucher: [
-        //         {name: "tokenId", type: "uint256"},
-        //         {name: "minPrice", type: "uint256"},
-        //         {name: "uri", type: "string"},  
-        //     ]
-        // }
-       // const signature = await signer._signTypedData(domain, types, voucher)
         
         if (localStorage.getItem("vouchers") == null) {
             localStorage.setItem("vouchers", "[]")

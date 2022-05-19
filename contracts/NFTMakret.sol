@@ -72,11 +72,7 @@ contract NFTMarket is ERC721URIStorage, ERC2981, EIP712, AccessControl, Ownable 
         // transfer the token to the redeemer
         _transfer(signer, msg.sender, voucher.tokenId);
 
-        bool sent = payable(signer).send(msg.value);
-        require(sent, "Transfer Failed");
-        console.log(sent);
-        console.log(signer);
-        console.log(payable(signer));
+        payable(signer).transfer(msg.value);
         _soldNFTs.increment();
 
         idToNFT[_soldNFTs.current()] = NFT(
